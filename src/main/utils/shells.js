@@ -2,7 +2,7 @@
  * @Author: 羊驼
  * @Date: 2025-06-23 09:03:57
  * @LastEditors: 羊驼
- * @LastEditTime: 2025-07-17 10:56:59
+ * @LastEditTime: 2025-07-17 15:44:28
  * @Description: 终端管理类
  */
 
@@ -80,10 +80,10 @@ export default class ShellManager {
     /**
     * @description: 清空脚本
     */
-    clearRunner() {
+    async clearRunner() {
         for (let shell in this.task) {
             let item = this.task[shell]
-            item.runner && this.Stop(item.id)
+            await this.Stop(item)
             delete this.task[shell]
         }
     }
@@ -91,11 +91,11 @@ export default class ShellManager {
     /**
      * @description: 取消所有子进程的监听
      */
-    killAllRunner() {
+    async killAllRunner() {
         console.log("kill-child-process", new Date().getTime())
         for (let shell in this.task) {
             let item = this.task[shell]
-            item.runner && this.Stop(item.id)
+            await this.Stop(item)
         }
         process.removeAllListeners()
         process.exit(0)
@@ -119,7 +119,7 @@ export default class ShellManager {
         for (let id in this.task) {
             let item = this.task[id]
             if (!ids.has(id)) {
-                item.runner && this.Stop(id)
+                item.runner && await this.Stop(id)
                 delete task[id]
             }
         }
@@ -221,6 +221,7 @@ export default class ShellManager {
                         item.status = "已停止"
                         console.error('获取内存使用情况时出错:', err);
                         clearInterval(interval)
+                        item.memory = 0
                         return;
                     }
                     // console.log(stats)
@@ -327,18 +328,6 @@ export default class ShellManager {
         })
 
     }
-
-    /**
-    * @description: 暂停
-    */
-    Pause(id) {
-        let item = this.task[id]
-        if (!item.runner) return
-        if (item.status != STATUS.运行中) return
-        item.runner.kill('SIGSTOP');
-        item.status = STATUS.暂停中
-    }
-
     /**
      * @description: 启动
      */
@@ -349,11 +338,14 @@ export default class ShellManager {
     /**
     * @description: 停止
     */
-    Stop(id) {
+    async Stop(id) {
         let item = this.task[id]
         if (!item.runner) return
-        // item.runner.stdout.removeAllListeners()
-        // item.runner.stderr.removeAllListeners()
+        let tree = await pidtree(item.runner.pid, { advanced: false });
+        console.log(tree);
+        tree.forEach((pid) => {
+            treeKill(pid, 'SIGTERM')
+        })
         item.runner.removeAllListeners()
         treeKill(item.runner.pid, 'SIGTERM')
         item.status = STATUS.已退出
