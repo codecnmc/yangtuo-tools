@@ -2,7 +2,7 @@
  * @Author: 羊驼
  * @Date: 2025-06-23 09:03:57
  * @LastEditors: 羊驼
- * @LastEditTime: 2025-07-16 11:06:27
+ * @LastEditTime: 2025-07-17 10:56:59
  * @Description: 终端管理类
  */
 
@@ -15,6 +15,7 @@ import treeKill from "tree-kill"
 import Config from '../config';
 import Database from '../database'
 import common from '@resources/js/common'
+import pidtree from 'pidtree'
 const STATUS = common.STATUS
 
 // 简易日志 本来想用winston 后续发现没必要一直写入 我就看最新的
@@ -191,11 +192,31 @@ export default class ShellManager {
             const logger = new Logger(500)
 
             // 获取内存使用情况
-            let interval = setInterval(() => {
+            let interval = setInterval(async () => {
                 if (runner.killed) {
                     clearInterval(interval)
                 }
-                pidusage(runner.pid, (err, stats) => {
+                // console.log("使用内存：" , process.memoryUsage());
+                let promise = []
+                try {
+                    // 新增 处理存在子进程的问题
+                    let tree = await pidtree(runner.pid, { advanced: false });
+                    for (let item of tree) {
+                        promise.push(new Promise((resolve, reject) => {
+                            pidusage(item, (err, stats) => {
+                                if (err) {
+                                    console.error('获取内存使用情况时出错:', err);
+                                    resolve(0)
+                                    return;
+                                }
+                                resolve(stats.memory)
+                            });
+                        }))
+                    }
+                } catch (err) {
+                    console.error('获取内存使用情况时出错:', err);
+                }
+                pidusage(runner.pid, async (err, stats) => {
                     if (err) {
                         item.status = "已停止"
                         console.error('获取内存使用情况时出错:', err);
@@ -203,10 +224,14 @@ export default class ShellManager {
                         return;
                     }
                     // console.log(stats)
-                    item.memory = stats.memory
+                    // item.memory = stats.memory
+                    await Promise.all(promise).then((res) => {
+                        item.memory = res.reduce((a, b) => a + b, 0) + stats.memory
+                    })
                     // console.log(`子进程的内存使用情况: ${JSON.stringify(stats)}`);
                 });
-            }, 3000);
+
+            }, 2000);
 
 
             let interval2 = setInterval(() => {
@@ -240,7 +265,7 @@ export default class ShellManager {
                 logger.info(data.toString())
             })
             runner.stderr.on("data", (data) => {
-                console.log(`runner stderr error:${data.toString()}`)
+                // console.log(`runner stderr error:${data.toString()}`)
                 logger.error(data.toString())
             })
 
@@ -257,7 +282,6 @@ export default class ShellManager {
             resolve()
         })
     }
-
     /**
     * @description: 获取spawn对象
     */
@@ -323,8 +347,8 @@ export default class ShellManager {
     }
 
     /**
-   * @description: 停止
-   */
+    * @description: 停止
+    */
     Stop(id) {
         let item = this.task[id]
         if (!item.runner) return

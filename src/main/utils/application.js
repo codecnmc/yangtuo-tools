@@ -2,13 +2,14 @@
  * @Author: 羊驼
  * @Date: 2025-07-03 10:00:33
  * @LastEditors: 羊驼
- * @LastEditTime: 2025-07-16 11:42:11
+ * @LastEditTime: 2025-07-16 16:41:52
  * @Description: file content
  */
 import { app, BrowserWindow } from 'electron'
 import { electronApp } from '@electron-toolkit/utils'
 import Config from '../config'
 import AutoLaunch from "auto-launch"
+import ShellManager from './shells';
 
 export default class Application {
     //　主窗口
@@ -47,6 +48,7 @@ export default class Application {
 
         process.on('uncaughtException', (err) => {
             console.error('未捕获的异常:', err);
+            ShellManager.getInstance().killAllRunner()
             // process.exit(1); // 设置退出码为1
         });
     }

@@ -2,12 +2,13 @@
  * @Author: 羊驼
  * @Date: 2025-06-17 10:20:25
  * @LastEditors: 羊驼
- * @LastEditTime: 2025-07-15 11:08:42
+ * @LastEditTime: 2025-07-17 11:28:44
  * @Description: 数据库类
  */
 const { Sequelize } = require('sequelize');
-import database from "@resources/other/database.sqlite?asset&asarUnpack"
 import { app, BrowserWindow, dialog } from 'electron'
+import path  from 'node:path'
+const database = path.join(__dirname, "../../resources/other/database.sqlite").replace("app.asar", "app.asar.unpacked");
 //　初始化文件与数据库
 const sequelize = new Sequelize({
     dialect: 'sqlite',

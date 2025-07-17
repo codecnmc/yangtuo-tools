@@ -2,7 +2,7 @@
  * @Author: 羊驼
  * @Date: 2025-07-01 16:41:15
  * @LastEditors: 羊驼
- * @LastEditTime: 2025-07-16 11:13:50
+ * @LastEditTime: 2025-07-17 11:26:15
  * @Description: 脚本控制台页面
 -->
 <template>
@@ -181,11 +181,13 @@
               :height="calHeight()"
               :items="item.logs"
               v-if="refresh"
-              ref="list"
+              :ref="item.id"
+              @mouseenter="changeStatus(item.id,0)"
+              @mouseleave="changeStatus(item.id,1)"
             >
               <template v-slot:default="{ item:log }">
                 <v-list-item :class="log.type">
-                  {{log.content}}
+                  <div v-html="log.content" />
                 </v-list-item>
               </template>
             </v-virtual-scroll>
@@ -292,7 +294,8 @@ export default {
       config: {
         appearance: {},
         file_terminal_custom: {}
-      }
+      },
+      scrollStatus: {}
     }
   },
   computed: {
@@ -462,6 +465,20 @@ export default {
       }
       deleteItems = new Set(deleteItems)
       this.shows = this.shows.filter((x) => !deleteItems.has(x.id))
+      for (let item of this.shows) {
+        if (this.scrollStatus[item.id] === undefined) {
+          this.scrollStatus[item.id] = 1
+        }
+        if (this.scrollStatus[item.id] !== 0) {
+          let target = this.$refs[item.id] && this.$refs[item.id][0] && this.$refs[item.id][0].$el
+          // console.log(this.$refs[item.id])
+          if (target) {
+            // console.dir(target)
+            target.scrollBy({ top: target.scrollHeight, behavior: 'smooth' })
+            // console.log(target);
+          }
+        }
+      }
     },
     // 控制台命令调用
     async command(command, id) {
@@ -485,6 +502,9 @@ export default {
     // 删除分组
     deleteGroup(group) {
       delete this.groupList[group]
+    },
+    changeStatus(id, status) {
+      this.scrollStatus[id] = status
     }
   }
 }

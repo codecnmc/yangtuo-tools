@@ -2,7 +2,7 @@
  * @Author: 羊驼
  * @Date: 2025-06-17 09:45:15
  * @LastEditors: 羊驼
- * @LastEditTime: 2025-07-16 11:57:46
+ * @LastEditTime: 2025-07-16 16:47:56
  * @Description: 事件中心
  */
 import { app, shell, ipcMain, dialog, screen } from 'electron'
@@ -17,7 +17,7 @@ import api from '@resources/js/api';
 import DataListener from './listener';
 import normal_bg from "@resources/pictures/apex.png?asset&asarUnpack"
 import bg from "@resources/pictures/bg.png?asset&asarUnpack"
-import { execSync } from 'node:child_process';
+import { exec } from 'node:child_process';
 /**
  * @description:功能处理中心
  */
@@ -217,7 +217,8 @@ export default class EventCenter {
         return {
             // 用IDE打开目录
             [api.FILE.OPEN_IDE]: (event, path) => {
-                execSync(path)
+                console.log(path);
+                exec(path);
             },
             // 打开文件
             [api.FILE.OPEN_FILE]: (event, item) => {

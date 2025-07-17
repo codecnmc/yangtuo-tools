@@ -2,7 +2,7 @@
  * @Author: 羊驼
  * @Date: 2025-06-23 09:03:57
  * @LastEditors: 羊驼
- * @LastEditTime: 2025-07-16 10:06:13
+ * @LastEditTime: 2025-07-17 11:03:15
  * @Description: file content
 -->
 <template>
@@ -138,7 +138,7 @@
           <template #item.status="{ item }">
             <v-chip
               density="compact"
-              color="success"
+              :color="calcStatusColor(item.status)"
             >{{ item.status }}</v-chip>
           </template>
           <template #item.enable="{ item }">
@@ -189,18 +189,6 @@
               </v-btn>
             </template>
             <template v-else>
-              <!-- <v-btn
-                size="mini"
-                flat
-                color="black"
-                title="控制台"
-                :loading="loading"
-                v-if="!item.showLog"
-                class="mr-2"
-                @click="$store.setLogShow(item.id,true)"
-              >
-                <v-icon>mdi-console</v-icon>
-              </v-btn> -->
               <v-btn
                 size="mini"
                 flat
@@ -381,8 +369,20 @@ export default {
         this.openEditor('create', list)
       }
       this.loading = false
+    },
+    // 获取对应状态的chip显示颜色
+    calcStatusColor(status) {
+      let STATUS = this.STATUS
+      switch (status) {
+        case STATUS.运行中:
+          return 'success'
+        case STATUS.已停止:
+        case STATUS.已退出:
+          return 'error'
+        default:
+          return 'info'
+      }
     }
   }
 }
 </script>
-
