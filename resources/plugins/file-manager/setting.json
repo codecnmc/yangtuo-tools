@@ -1,0 +1,1 @@
+{"name":"file-manager","displayName":"文件管理器","main":"./html/index.html","script":"./index.js","cover":"icon.jpg","hash":"","version":"0.0.1","author":"yangtuo","description":"桌面端管理终端插件","enable":false,"type":"view","framework":["win32-x64"],"electron":{},"injectCss":true,"dev":{"local":false,"port":5175,"devTools":true,"hash":""}}

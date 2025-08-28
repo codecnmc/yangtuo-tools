@@ -2,18 +2,21 @@
  * @Author: 羊驼
  * @Date: 2025-07-03 10:00:33
  * @LastEditors: 羊驼
- * @LastEditTime: 2025-07-16 16:41:52
+ * @LastEditTime: 2025-08-22 10:01:19
  * @Description: file content
  */
 import { app, BrowserWindow } from 'electron'
 import { electronApp } from '@electron-toolkit/utils'
 import Config from '../config'
 import AutoLaunch from "auto-launch"
-import ShellManager from './shells';
+
 
 export default class Application {
     //　主窗口
     static window;
+    // 搜索窗口
+    static search;
+    static view;
     constructor(createWindow) {
         Config.init()
         this.create(createWindow)
@@ -46,20 +49,14 @@ export default class Application {
             }
         })
 
-        process.on('uncaughtException', (err) => {
-            console.error('未捕获的异常:', err);
-            ShellManager.getInstance().killAllRunner()
-            // process.exit(1); // 设置退出码为1
-        });
     }
 
     /**
-     * @description: 快捷键创建
+     * @description: 启动检测
      * @return {*}
      */
     afterCreate() {
         let config = Config.getConfig()
-        Config.shortcut(config, false)
         const autoLauncher = new AutoLaunch({
             name: app.getName(),
             path: app.getPath('exe')
@@ -71,7 +68,5 @@ export default class Application {
                 autoLauncher.disable()
             }
         })
-
-        Config.setConfig(config)
     }
 }

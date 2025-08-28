@@ -4,6 +4,9 @@
         "paths": {
             "@resources/*": [
                 "./resources/*"
+            ],
+            "@main/*": [
+                "./src/main/*"
             ]
         }
     },

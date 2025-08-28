@@ -11,9 +11,14 @@ files:
 asarUnpack:
   - out/main/chunks/*.node
   - resources/**
+extraResources:
+  from : resources
+  to : app.asar.unpacked/resources
 win:
   executableName: 羊驼的工具箱
 nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}

@@ -1,0 +1,147 @@
+:root {
+  --main-background       : #F9FAFB;
+  --background-color      : #F9FAFB;
+  --title-bg-color        : #20222A;
+  --title-font-color      : #fff;
+  --font-color            : #000;
+  --background-hover-color: #F9FAFB;
+  --font-hover-color      : #ffffff;
+  --scroll-track          : rgba(209, 209, 209, 0.5);
+  --scroll-thumb          : rgba(209, 209, 209, 1);
+  --side-bar-background   : #FFFFFF;
+  --side-bar-color        : #000;
+  --side-bar-active-bg    : transparent;
+  --side-bar-acitve-color : #409EFF;
+  --top-bar-height        : 32px;
+  --tool-card-bg          : rgba(0, 0, 0, 0.3);
+}
+
+#app {
+  user-select: none;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing : border-box;
+  margin     : 0;
+  font-weight: normal;
+}
+
+*::-webkit-scrollbar {
+  width : 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background-color: var(--scroll-track);
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--scroll-thumb);
+  border-radius   : 4px;
+}
+
+ul {
+  list-style: none;
+}
+
+body {
+  min-height: 100vh;
+  overflow  : hidden;
+}
+
+body::-webkit-scrollbar {
+  display: none;
+}
+
+
+.card .v-data-table {
+  font-size: 12px !important;
+}
+
+.v-list-item-title {
+  font-size: 14px !important;
+}
+
+.v-system-bar {
+  user-select: none;
+  app-region : drag;
+}
+
+.v-btn {
+  app-region : no-drag !important;
+  user-select: auto !important;
+}
+
+.zone {
+  height       : 50px;
+  margin-bottom: 20px;
+}
+
+.page {
+  width              : 100vw;
+  height             : 100vh;
+  background-color   : var(--main-background) !important;
+  overflow           : hidden !important;
+  background-size    : cover !important;
+  background-position: center center !important;
+}
+
+.page .title {
+  background-color: var(--title-bg-color);
+  color           : var(--title-font-color);
+  user-select     : none;
+  app-region      : drag;
+}
+
+.page:hover {
+  color: var(--font-hover-color);
+}
+
+
+.page .content:hover {
+  background-color: var(--background-hover-color);
+}
+
+.page .content {
+  background-color: var(--background-color);
+  background-size : cover;
+  color           : var(--font-color);
+  overflow        : auto;
+  height          : 100vh;
+  max-width       : unset !important;
+}
+
+.page .side-bar {
+  background-color: var(--side-bar-background) !important;
+  color           : var(--side-bar-color) !important;
+}
+
+
+.v-card,
+.v-table,
+.v-table th,
+.v-table tr,
+.v-table td {
+  background-color: transparent !important;
+  color           : var(--font-color) !important;
+}
+
+.side-bar .v-list-item[aria-selected=true] {
+  color           : var(--side-bar-acitve-color) !important;
+  background-color: var(--side-bar-active-bg) !important;
+}
+
+.loading {
+  position        : fixed;
+  top             : 0;
+  left            : 0;
+  width           : 100%;
+  height          : 100%;
+  background-color: rgba(0, 0, 0, 0.2);
+  display         : flex;
+  justify-content : center;
+  align-items     : center;
+  z-index         : 9999;
+}

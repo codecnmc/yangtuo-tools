@@ -1,0 +1,1309 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>前端工程师工具箱</title>
+  <!-- 引入Tailwind CSS -->
+  <script src="./static/taildwind.js"></script>
+  <script src="./static/vue@2.js"></script>
+  <link href="./static/font-awesome/css/font-awesome.min.css" rel="stylesheet" />
+  
+  <!-- 配置Tailwind -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#165DFF',
+            secondary: '#36CFC9',
+            success: '#52C41A',
+            warning: '#FAAD14',
+            danger: '#FF4D4F',
+            dark: '#1F2937',
+            light: '#F9FAFB'
+          },
+          fontFamily: {
+            inter: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['Consolas', 'Monaco', 'monospace']
+          },
+        },
+      }
+    }
+  </script>
+  
+  <!-- 自定义工具类 -->
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .content-auto {
+        content-visibility: auto;
+      }
+      .transition-height {
+        transition-property: height;
+        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        transition-duration: 300ms;
+      }
+      .tool-card {
+        @apply bg-white dark:bg-dark border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer p-4 flex flex-col items-center text-center;
+      }
+      .tool-card.active {
+        @apply border-primary dark:border-primary bg-primary/5;
+      }
+      .btn-primary {
+        @apply bg-primary hover:bg-primary/90 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 shadow-sm hover:shadow;
+      }
+      .btn-secondary {
+        @apply bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-medium py-2 px-4 rounded-lg transition-all duration-200;
+      }
+      .input-field {
+        @apply w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all duration-200;
+      }
+      .code-area {
+        @apply w-full p-4 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 font-mono text-sm focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all duration-200 resize-none;
+      }
+    }
+  </style>
+</head>
+
+<body class="font-inter bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen flex flex-col transition-colors duration-300">
+
+
+  <!-- 主内容区 -->
+  <main class="flex-1 mx-auto px-4 py-6 flex gap-6 w-full">
+    <!-- 左侧工具列表 -->
+    <aside class="w-full md:w-64 lg:w-72 shrink-0">
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 h-full">
+        <h2 class="text-lg font-semibold mb-4 flex items-center">
+          <i class="fa fa-th-large mr-2 text-primary"></i>工具列表
+        </h2>
+        
+        <div class="grid grid-cols-2 gap-3" id="tool-list">
+          <!-- 工具项将通过JS动态生成 -->
+        </div>
+      </div>
+    </aside>
+    
+    <!-- 右侧工具内容区 -->
+    <section class="flex-1 min-w-0">
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 md:p-6 h-full flex flex-col" id="tool-content">
+        <!-- 工具内容将通过JS动态加载 -->
+        <div class="flex-1 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400">
+          <i class="fa fa-code text-5xl mb-4 opacity-30"></i>
+          <h3 class="text-xl font-medium mb-2">选择一个工具开始使用</h3>
+          <p class="text-center max-w-md">从左侧列表中选择需要的工具，右侧将显示对应的操作界面</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 通知组件 -->
+  <div id="notification" class="fixed bottom-6 right-6 px-4 py-3 rounded-lg shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 flex items-center space-x-2 z-50">
+    <i class="fa fa-check-circle text-success"></i>
+    <span id="notification-text">操作成功</span>
+  </div>
+
+  <script>
+    // 工具列表数据
+    const tools = [
+      {
+        id: 'json-formatter',
+        name: 'JSON格式化',
+        icon: 'fa-code',
+        description: '格式化、压缩JSON数据',
+        component: createJsonFormatter
+      },
+      {
+        id: 'url-encoder',
+        name: 'URL编解码',
+        icon: 'fa-link',
+        description: 'URL编码与解码转换',
+        component: createUrlEncoder
+      },
+      {
+        id: 'base64',
+        name: 'Base64转换',
+        icon: 'fa-exchange',
+        description: 'Base64编码与解码',
+        component: createBase64Tool
+      },
+      {
+        id: 'color-converter',
+        name: '颜色转换',
+        icon: 'fa-eyedropper',
+        description: 'HEX、RGB、HSL颜色转换',
+        component: createColorConverter
+      },
+      {
+        id: 'timestamp',
+        name: '时间戳转换',
+        icon: 'fa-clock-o',
+        description: '时间与时间戳互转',
+        component: createTimestampTool
+      },
+      {
+        id: 'regex-tester',
+        name: '正则测试',
+        icon: 'fa-search',
+        description: '正则表达式测试工具',
+        component: createRegexTester
+      },
+      {
+        id: 'html-encoder',
+        name: 'HTML编解码',
+        icon: 'fa-html5',
+        description: 'HTML实体编码与解码',
+        component: createHtmlEncoder
+      },
+      {
+        id: 'css-minifier',
+        name: 'CSS压缩',
+        icon: 'fa-css3',
+        description: 'CSS代码压缩与格式化',
+        component: createCssMinifier
+      },
+      {
+        id: 'uuid-generator',
+        name: 'UUID生成',
+        icon: 'fa-hashtag',
+        description: '生成UUID/GUID',
+        component: createUuidGenerator
+      }
+    ];
+
+    // DOM元素
+    const toolListEl = document.getElementById('tool-list');
+    const toolContentEl = document.getElementById('tool-content');
+    const themeToggleEl = document.getElementById('theme-toggle');
+    const notificationEl = document.getElementById('notification');
+    const notificationTextEl = document.getElementById('notification-text');
+
+    // 初始化工具列表
+    function initToolList() {
+      tools.forEach(tool => {
+        const toolEl = document.createElement('div');
+        toolEl.className = 'tool-card';
+        toolEl.dataset.id = tool.id;
+        toolEl.innerHTML = `
+          <i class="fa ${tool.icon} text-primary text-xl mb-2"></i>
+          <span class="text-sm font-medium">${tool.name}</span>
+        `;
+        
+        toolEl.addEventListener('click', () => {
+          // 更新选中状态
+          document.querySelectorAll('.tool-card').forEach(el => {
+            el.classList.remove('active');
+          });
+          toolEl.classList.add('active');
+          
+          // 加载工具内容
+          loadToolContent(tool);
+        });
+        
+        toolListEl.appendChild(toolEl);
+      });
+    }
+
+    // 加载工具内容
+    function loadToolContent(tool) {
+      // 添加过渡动画
+      toolContentEl.style.opacity = '0';
+      setTimeout(() => {
+        toolContentEl.innerHTML = `
+          <div class="mb-6">
+            <h2 class="text-xl font-bold flex items-center">
+              <i class="fa ${tool.icon} mr-2 text-primary"></i>
+              ${tool.name}
+            </h2>
+            <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">${tool.description}</p>
+          </div>
+          <div id="tool-component" class="flex-1 min-h-0 flex flex-col">
+            ${tool.component()}
+          </div>
+        `;
+        toolContentEl.style.opacity = '1';
+        bindToolEvents()
+      }, 200);
+    }
+
+    // 显示通知
+    function showNotification(message, type = 'success') {
+      notificationTextEl.textContent = message;
+      notificationEl.className = `fixed bottom-6 right-6 px-4 py-3 rounded-lg shadow-lg transform translate-y-0 opacity-100 transition-all duration-300 flex items-center space-x-2 z-50 ${
+        type === 'success' ? 'bg-success/10 text-success border border-success/30' : 
+        type === 'error' ? 'bg-danger/10 text-danger border border-danger/30' : 
+        'bg-warning/10 text-warning border border-warning/30'
+      }`;
+      
+      notificationEl.querySelector('i').className = `fa ${
+        type === 'success' ? 'fa-check-circle' : 
+        type === 'error' ? 'fa-exclamation-circle' : 
+        'fa-exclamation-triangle'
+      }`;
+      
+      setTimeout(() => {
+        notificationEl.className = 'fixed bottom-6 right-6 px-4 py-3 rounded-lg shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 flex items-center space-x-2 z-50';
+      }, 3000);
+    }
+
+    // 复制到剪贴板
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        showNotification('已复制到剪贴板');
+      }).catch(err => {
+        showNotification('复制失败，请手动复制', 'error');
+        console.error('复制失败:', err);
+      });
+    }
+
+    // 初始化主题
+    function initTheme() {
+      if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }
+
+
+    // 工具组件 - JSON格式化
+    function createJsonFormatter() {
+      return `
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
+          <div class="flex flex-col h-full">
+            <label class="text-sm font-medium mb-2">输入JSON</label>
+            <textarea id="json-input" class="code-area flex-1" placeholder="请输入JSON字符串..."></textarea>
+            <div class="flex gap-2 mt-3">
+              <button id="json-format-btn" class="btn-primary flex-1 flex items-center justify-center">
+                <i class="fa fa-indent mr-1"></i> 格式化
+              </button>
+              <button id="json-compress-btn" class="btn-secondary flex-1 flex items-center justify-center">
+                <i class="fa fa-compress mr-1"></i> 压缩
+              </button>
+            </div>
+          </div>
+          <div class="flex flex-col h-full">
+            <label class="text-sm font-medium mb-2">输出结果</label>
+            <textarea id="json-output" class="code-area flex-1" placeholder="处理后的JSON将显示在这里..." readonly></textarea>
+            <div class="flex gap-2 mt-3">
+              <button id="json-copy-btn" class="btn-secondary flex-1 flex items-center justify-center">
+                <i class="fa fa-copy mr-1"></i> 复制结果
+              </button>
+              <button id="json-clear-btn" class="btn-secondary flex-1 flex items-center justify-center">
+                <i class="fa fa-trash mr-1"></i> 清空
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // 工具组件 - URL编解码
+    function createUrlEncoder() {
+      return `
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
+          <div class="flex flex-col h-full">
+            <label class="text-sm font-medium mb-2">原始字符串</label>
+            <textarea id="url-input" class="code-area flex-1" placeholder="请输入需要编码的字符串..."></textarea>
+            <div class="flex gap-2 mt-3">
+              <button id="url-encode-btn" class="btn-primary flex-1 flex items-center justify-center">
+                <i class="fa fa-lock mr-1"></i> 编码
+              </button>
+              <button id="url-decode-btn" class="btn-secondary flex-1 flex items-center justify-center">
+                <i class="fa fa-unlock mr-1"></i> 解码到输入
+              </button>
+            </div>
+          </div>
+          <div class="flex flex-col h-full">
+            <label class="text-sm font-medium mb-2">处理结果</label>
+            <textarea id="url-output" class="code-area flex-1" placeholder="处理后的结果将显示在这里..." readonly></textarea>
+            <div class="flex gap-2 mt-3">
+              <button id="url-copy-btn" class="btn-secondary flex-1 flex items-center justify-center">
+                <i class="fa fa-copy mr-1"></i> 复制结果
+              </button>
+              <button id="url-swap-btn" class="btn-secondary flex-1 flex items-center justify-center">
+                <i class="fa fa-exchange mr-1"></i> 交换
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // 工具组件 - Base64转换
+    function createBase64Tool() {
+      return `
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
+          <div class="flex flex-col h-full">
+            <label class="text-sm font-medium mb-2">原始内容</label>
+            <textarea id="base64-input" class="code-area flex-1" placeholder="请输入需要转换的内容..."></textarea>
+            <div class="flex gap-2 mt-3">
+              <button id="base64-encode-btn" class="btn-primary flex-1 flex items-center justify-center">
+                <i class="fa fa-arrow-right mr-1"></i> 编码为Base64
+              </button>
+            </div>
+          </div>
+          <div class="flex flex-col h-full">
+            <label class="text-sm font-medium mb-2">Base64内容</label>
+            <textarea id="base64-output" class="code-area flex-1" placeholder="Base64内容将显示在这里..."></textarea>
+            <div class="flex gap-2 mt-3">
+              <button id="base64-decode-btn" class="btn-primary flex-1 flex items-center justify-center">
+                <i class="fa fa-arrow-left mr-1"></i> 解码Base64
+              </button>
+              <button id="base64-copy-btn" class="btn-secondary flex-1 flex items-center justify-center">
+                <i class="fa fa-copy mr-1"></i> 复制
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // 工具组件 - 颜色转换
+    function createColorConverter() {
+      return `
+        <div class="space-y-6">
+          <div class="flex items-center gap-4">
+            <div id="color-preview" class="w-20 h-20 rounded-lg border border-gray-300 dark:border-gray-600" style="background-color: #165DFF;"></div>
+            <div class="flex-1">
+              <label class="text-sm font-medium block mb-1">颜色值</label>
+              <input type="text" id="color-input" class="input-field" placeholder="输入HEX、RGB或HSL颜色值" value="#165DFF">
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="text-sm font-medium block mb-1">HEX</label>
+              <div class="flex gap-2">
+                <input type="text" id="color-hex" class="input-field" readonly>
+                <button id="copy-hex" class="btn-secondary whitespace-nowrap px-3">复制</button>
+              </div>
+            </div>
+            <div>
+              <label class="text-sm font-medium block mb-1">RGB</label>
+              <div class="flex gap-2">
+                <input type="text" id="color-rgb" class="input-field" readonly>
+                <button id="copy-rgb" class="btn-secondary whitespace-nowrap px-3">复制</button>
+              </div>
+            </div>
+            <div>
+              <label class="text-sm font-medium block mb-1">HSL</label>
+              <div class="flex gap-2">
+                <input type="text" id="color-hsl" class="input-field" readonly>
+                <button id="copy-hsl" class="btn-secondary whitespace-nowrap px-3">复制</button>
+              </div>
+            </div>
+          </div>
+          
+          <div>
+            <label class="text-sm font-medium block mb-2">相关颜色</label>
+            <div id="color-variants" class="flex flex-wrap gap-3">
+              <!-- 颜色变体将通过JS生成 -->
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // 工具组件 - 时间戳转换
+    function createTimestampTool() {
+      return `
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div>
+            <label class="text-sm font-medium mb-2 block">日期时间</label>
+            <input type="datetime-local" id="datetime-input" class="input-field mb-3">
+            <div class="flex gap-2">
+              <button id="now-btn" class="btn-secondary flex-1">
+                <i class="fa fa-clock-o mr-1"></i> 当前时间
+              </button>
+              <button id="datetime-to-timestamp" class="btn-primary flex-1">
+                <i class="fa fa-arrow-right mr-1"></i> 转时间戳
+              </button>
+            </div>
+          </div>
+          
+          <div>
+            <label class="text-sm font-medium mb-2 block">时间戳 (毫秒)</label>
+            <input type="text" id="timestamp-input" class="input-field mb-3" placeholder="请输入时间戳">
+            <div class="flex gap-2">
+              <button id="now-timestamp-btn" class="btn-secondary flex-1">
+                <i class="fa fa-clock-o mr-1"></i> 当前时间戳
+              </button>
+              <button id="timestamp-to-datetime" class="btn-primary flex-1">
+                <i class="fa fa-arrow-left mr-1"></i> 转日期时间
+              </button>
+            </div>
+          </div>
+          
+          <div class="lg:col-span-2 mt-4">
+            <label class="text-sm font-medium mb-2 block">转换结果</label>
+            <div id="timestamp-result" class="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 min-h-[100px]">
+              转换结果将显示在这里
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // 工具组件 - 正则测试
+    function createRegexTester() {
+      return `
+        <div class="space-y-6">
+          <div>
+            <label class="text-sm font-medium mb-2 block">正则表达式</label>
+            <div class="flex gap-2">
+              <input type="text" id="regex-pattern" class="input-field" placeholder="例如: ^[a-z]+$">
+              <div class="flex gap-1">
+                <button id="regex-flag-g" class="btn-secondary px-3 py-2">g</button>
+                <button id="regex-flag-i" class="btn-secondary px-3 py-2">i</button>
+                <button id="regex-flag-m" class="btn-secondary px-3 py-2">m</button>
+              </div>
+            </div>
+          </div>
+          
+          <div>
+            <label class="text-sm font-medium mb-2 block">测试文本</label>
+            <textarea id="regex-text" class="code-area min-h-[150px]" placeholder="输入需要测试的文本..."></textarea>
+          </div>
+          
+          <div>
+            <button id="test-regex-btn" class="btn-primary">
+              <i class="fa fa-search mr-1"></i> 测试匹配
+            </button>
+          </div>
+          
+          <div>
+            <label class="text-sm font-medium mb-2 block">匹配结果</label>
+            <div id="regex-result" class="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 min-h-[100px]">
+              测试结果将显示在这里
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // 工具组件 - HTML编解码
+    function createHtmlEncoder() {
+      return `
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
+          <div class="flex flex-col h-full">
+            <label class="text-sm font-medium mb-2">HTML内容</label>
+            <textarea id="html-input" class="code-area flex-1" placeholder="请输入HTML内容..."></textarea>
+            <div class="flex gap-2 mt-3">
+              <button id="html-encode-btn" class="btn-primary flex-1 flex items-center justify-center">
+                <i class="fa fa-lock mr-1"></i> 编码为实体
+              </button>
+              <button id="html-decode-btn" class="btn-secondary flex-1 flex items-center justify-center">
+                <i class="fa fa-unlock mr-1"></i> 解码到输入
+              </button>
+            </div>
+          </div>
+          <div class="flex flex-col h-full">
+            <label class="text-sm font-medium mb-2">HTML实体</label>
+            <textarea id="html-output" class="code-area flex-1" placeholder="处理后的实体将显示在这里..." readonly></textarea>
+            <div class="flex gap-2 mt-3">
+              <button id="html-copy-btn" class="btn-secondary flex-1 flex items-center justify-center">
+                <i class="fa fa-copy mr-1"></i> 复制结果
+              </button>
+              <button id="html-swap-btn" class="btn-secondary flex-1 flex items-center justify-center">
+                <i class="fa fa-exchange mr-1"></i> 交换
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // 工具组件 - CSS压缩
+    function createCssMinifier() {
+      return `
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
+          <div class="flex flex-col h-full">
+            <label class="text-sm font-medium mb-2">格式化CSS</label>
+            <textarea id="css-input" class="code-area flex-1" placeholder="请输入CSS代码..."></textarea>
+            <div class="flex gap-2 mt-3">
+              <button id="css-minify-btn" class="btn-primary flex-1 flex items-center justify-center">
+                <i class="fa fa-compress mr-1"></i> 压缩
+              </button>
+              <button id="css-format-btn" class="btn-secondary flex-1 flex items-center justify-center">
+                <i class="fa fa-indent mr-1"></i> 格式化
+              </button>
+            </div>
+          </div>
+          <div class="flex flex-col h-full">
+            <label class="text-sm font-medium mb-2">处理结果</label>
+            <textarea id="css-output" class="code-area flex-1" placeholder="处理后的CSS将显示在这里..." readonly></textarea>
+            <div class="flex gap-2 mt-3">
+              <button id="css-copy-btn" class="btn-secondary flex-1 flex items-center justify-center">
+                <i class="fa fa-copy mr-1"></i> 复制结果
+              </button>
+              <button id="css-clear-btn" class="btn-secondary flex-1 flex items-center justify-center">
+                <i class="fa fa-trash mr-1"></i> 清空
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // 工具组件 - UUID生成
+    function createUuidGenerator() {
+      return `
+        <div class="space-y-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="text-sm font-medium mb-2 block">UUID版本</label>
+              <select id="uuid-version" class="input-field">
+                <option value="v4">UUID v4 (随机)</option>
+                <option value="v1">UUID v1 (时间戳)</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-sm font-medium mb-2 block">生成数量</label>
+              <input type="number" id="uuid-count" class="input-field" min="1" max="100" value="1">
+            </div>
+          </div>
+          
+          <div>
+            <label class="text-sm font-medium mb-2 block">格式选项</label>
+            <div class="flex flex-wrap gap-4 py-2">
+              <label class="flex items-center gap-2">
+                <input type="checkbox" id="uuid-hyphens" class="rounded text-primary" checked>
+                <span>包含连字符</span>
+              </label>
+              <label class="flex items-center gap-2">
+                <input type="checkbox" id="uuid-uppercase" class="rounded text-primary">
+                <span>大写字母</span>
+              </label>
+            </div>
+          </div>
+          
+          <div class="flex gap-2">
+            <button id="generate-uuid-btn" class="btn-primary flex-1">
+              <i class="fa fa-refresh mr-1"></i> 生成UUID
+            </button>
+            <button id="copy-all-uuid-btn" class="btn-secondary flex-1">
+              <i class="fa fa-copy mr-1"></i> 复制所有
+            </button>
+          </div>
+          
+          <div>
+            <label class="text-sm font-medium mb-2 block">生成结果</label>
+            <div id="uuid-results" class="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 min-h-[100px] max-h-[300px] overflow-auto">
+              生成的UUID将显示在这里
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // 绑定工具事件
+    function bindToolEvents() {
+      // 监听工具内容变化，绑定对应工具的事件
+  
+        console.log('工具内容已更新，绑定事件...');
+        const currentToolId = document.querySelector('.tool-card.active')?.dataset.id;
+        switch(currentToolId) {
+          case 'json-formatter':
+            bindJsonFormatterEvents();
+            break;
+          case 'url-encoder':
+            bindUrlEncoderEvents();
+            break;
+          case 'base64':
+            bindBase64Events();
+            break;
+          case 'color-converter':
+            bindColorConverterEvents();
+            break;
+          case 'timestamp':
+            bindTimestampEvents();
+            break;
+          case 'regex-tester':
+            bindRegexTesterEvents();
+            break;
+          case 'html-encoder':
+            bindHtmlEncoderEvents();
+            break;
+          case 'css-minifier':
+            bindCssMinifierEvents();
+            break;
+          case 'uuid-generator':
+            bindUuidGeneratorEvents();
+            break;
+        }
+    
+    }
+
+    // JSON格式化工具事件
+    function bindJsonFormatterEvents() {
+      const inputEl = document.getElementById('json-input');
+      const outputEl = document.getElementById('json-output');
+      const formatBtn = document.getElementById('json-format-btn');
+      const compressBtn = document.getElementById('json-compress-btn');
+      const copyBtn = document.getElementById('json-copy-btn');
+      const clearBtn = document.getElementById('json-clear-btn');
+      
+      formatBtn.addEventListener('click', () => {
+        try {
+          const json = JSON.parse(inputEl.value);
+          outputEl.value = JSON.stringify(json, null, 2);
+          showNotification('JSON格式化成功');
+        } catch (e) {
+          showNotification('无效的JSON格式: ' + e.message, 'error');
+        }
+      });
+      
+      compressBtn.addEventListener('click', () => {
+        try {
+          const json = JSON.parse(inputEl.value);
+          outputEl.value = JSON.stringify(json);
+          showNotification('JSON压缩成功');
+        } catch (e) {
+          showNotification('无效的JSON格式: ' + e.message, 'error');
+        }
+      });
+      
+      copyBtn.addEventListener('click', () => {
+        if (outputEl.value) {
+          copyToClipboard(outputEl.value);
+        } else {
+          showNotification('没有可复制的内容', 'warning');
+        }
+      });
+      
+      clearBtn.addEventListener('click', () => {
+        inputEl.value = '';
+        outputEl.value = '';
+      });
+    }
+
+    // URL编解码工具事件
+    function bindUrlEncoderEvents() {
+      const inputEl = document.getElementById('url-input');
+      const outputEl = document.getElementById('url-output');
+      const encodeBtn = document.getElementById('url-encode-btn');
+      const decodeBtn = document.getElementById('url-decode-btn');
+      const copyBtn = document.getElementById('url-copy-btn');
+      const swapBtn = document.getElementById('url-swap-btn');
+      
+      encodeBtn.addEventListener('click', () => {
+        try {
+          outputEl.value = encodeURIComponent(inputEl.value);
+          showNotification('URL编码成功');
+        } catch (e) {
+          showNotification('编码失败: ' + e.message, 'error');
+        }
+      });
+      
+      decodeBtn.addEventListener('click', () => {
+        try {
+          inputEl.value = decodeURIComponent(outputEl.value);
+          showNotification('URL解码成功');
+        } catch (e) {
+          showNotification('解码失败: ' + e.message, 'error');
+        }
+      });
+      
+      copyBtn.addEventListener('click', () => {
+        if (outputEl.value) {
+          copyToClipboard(outputEl.value);
+        } else {
+          showNotification('没有可复制的内容', 'warning');
+        }
+      });
+      
+      swapBtn.addEventListener('click', () => {
+        const temp = inputEl.value;
+        inputEl.value = outputEl.value;
+        outputEl.value = temp;
+        showNotification('内容已交换');
+      });
+    }
+
+    // Base64转换工具事件
+    function bindBase64Events() {
+      const inputEl = document.getElementById('base64-input');
+      const outputEl = document.getElementById('base64-output');
+      const encodeBtn = document.getElementById('base64-encode-btn');
+      const decodeBtn = document.getElementById('base64-decode-btn');
+      const copyBtn = document.getElementById('base64-copy-btn');
+      
+      encodeBtn.addEventListener('click', () => {
+        try {
+          outputEl.value = btoa(unescape(encodeURIComponent(inputEl.value)));
+          showNotification('Base64编码成功');
+        } catch (e) {
+          showNotification('编码失败: ' + e.message, 'error');
+        }
+      });
+      
+      decodeBtn.addEventListener('click', () => {
+        try {
+          inputEl.value = decodeURIComponent(escape(atob(outputEl.value)));
+          showNotification('Base64解码成功');
+        } catch (e) {
+          showNotification('解码失败: 无效的Base64格式', 'error');
+        }
+      });
+      
+      copyBtn.addEventListener('click', () => {
+        if (outputEl.value) {
+          copyToClipboard(outputEl.value);
+        } else {
+          showNotification('没有可复制的内容', 'warning');
+        }
+      });
+    }
+
+    // 颜色转换工具事件
+    function bindColorConverterEvents() {
+      const inputEl = document.getElementById('color-input');
+      const previewEl = document.getElementById('color-preview');
+      const hexEl = document.getElementById('color-hex');
+      const rgbEl = document.getElementById('color-rgb');
+      const hslEl = document.getElementById('color-hsl');
+      const copyHexBtn = document.getElementById('copy-hex');
+      const copyRgbBtn = document.getElementById('copy-rgb');
+      const copyHslBtn = document.getElementById('copy-hsl');
+      const variantsEl = document.getElementById('color-variants');
+      
+      // 解析颜色并更新显示
+      function updateColor(colorStr) {
+        try {
+          // 创建临时元素获取计算后的颜色
+          const tempEl = document.createElement('div');
+          tempEl.style.color = colorStr;
+          document.body.appendChild(tempEl);
+          
+          // 获取计算后的颜色
+          const computedColor = getComputedStyle(tempEl).color;
+          document.body.removeChild(tempEl);
+          
+          // 更新预览
+          previewEl.style.backgroundColor = computedColor;
+          
+          // 解析RGB
+          const rgbMatch = computedColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+          if (rgbMatch) {
+            const r = parseInt(rgbMatch[1]);
+            const g = parseInt(rgbMatch[2]);
+            const b = parseInt(rgbMatch[3]);
+            
+            // 转换为HEX
+            const hex = `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()}`;
+            
+            // 转换为HSL
+            const rNorm = r / 255;
+            const gNorm = g / 255;
+            const bNorm = b / 255;
+            const max = Math.max(rNorm, gNorm, bNorm);
+            const min = Math.min(rNorm, gNorm, bNorm);
+            let h, s, l = (max + min) / 2;
+            
+            if (max === min) {
+              h = s = 0; // 灰色
+            } else {
+              const d = max - min;
+              s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+              
+              switch (max) {
+                case rNorm: h = (gNorm - bNorm) / d + (gNorm < bNorm ? 6 : 0); break;
+                case gNorm: h = (bNorm - rNorm) / d + 2; break;
+                case bNorm: h = (rNorm - gNorm) / d + 4; break;
+              }
+              h *= 60;
+            }
+            
+            const hsl = `hsl(${Math.round(h)}, ${Math.round(s * 100)}%, ${Math.round(l * 100)}%)`;
+            
+            // 更新输入和显示
+            inputEl.value = colorStr;
+            hexEl.value = hex;
+            rgbEl.value = `rgb(${r}, ${g}, ${b})`;
+            hslEl.value = hsl;
+            
+            // 生成颜色变体
+            generateColorVariants(r, g, b);
+            
+            return true;
+          }
+        } catch (e) {
+          console.error('颜色解析错误:', e);
+        }
+        
+        showNotification('无效的颜色值', 'error');
+        return false;
+      }
+      
+      // 生成颜色变体
+      function generateColorVariants(r, g, b) {
+        variantsEl.innerHTML = '';
+        
+        // 生成不同亮度的变体
+        [-50, -30, -10, 0, 10, 30, 50].forEach(lightness => {
+          let nr = r + lightness;
+          let ng = g + lightness;
+          let nb = b + lightness;
+          
+          // 确保在0-255范围内
+          nr = Math.max(0, Math.min(255, nr));
+          ng = Math.max(0, Math.min(255, ng));
+          nb = Math.max(0, Math.min(255, nb));
+          
+          const hex = `#${((1 << 24) + (nr << 16) + (ng << 8) + nb).toString(16).slice(1).toUpperCase()}`;
+          
+          const variantEl = document.createElement('div');
+          variantEl.className = 'flex flex-col items-center cursor-pointer';
+          variantEl.innerHTML = `
+            <div class="w-16 h-16 rounded border border-gray-300 dark:border-gray-600 mb-1" style="background-color: ${hex}"></div>
+            <span class="text-xs">${hex}</span>
+          `;
+          
+          variantEl.addEventListener('click', () => {
+            updateColor(hex);
+          });
+          
+          variantsEl.appendChild(variantEl);
+        });
+      }
+      
+      // 初始更新
+      updateColor(inputEl.value);
+      
+      // 事件绑定
+      inputEl.addEventListener('change', () => {
+        updateColor(inputEl.value);
+      });
+      
+      copyHexBtn.addEventListener('click', () => copyToClipboard(hexEl.value));
+      copyRgbBtn.addEventListener('click', () => copyToClipboard(rgbEl.value));
+      copyHslBtn.addEventListener('click', () => copyToClipboard(hslEl.value));
+    }
+
+    // 时间戳转换工具事件
+    function bindTimestampEvents() {
+      const datetimeInputEl = document.getElementById('datetime-input');
+      const timestampInputEl = document.getElementById('timestamp-input');
+      const resultEl = document.getElementById('timestamp-result');
+      const nowBtn = document.getElementById('now-btn');
+      const nowTimestampBtn = document.getElementById('now-timestamp-btn');
+      const datetimeToTimestampBtn = document.getElementById('datetime-to-timestamp');
+      const timestampToDatetimeBtn = document.getElementById('timestamp-to-datetime');
+      
+      // 设置当前时间
+      function setCurrentDateTime() {
+        const now = new Date();
+        // 转换为本地时间的ISO格式（不含时区）
+        const localIso = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+        datetimeInputEl.value = localIso;
+        timestampInputEl.value = now.getTime().toString();
+      }
+      
+      // 初始化当前时间
+      setCurrentDateTime();
+      
+      // 日期时间转时间戳
+      datetimeToTimestampBtn.addEventListener('click', () => {
+        if (!datetimeInputEl.value) {
+          showNotification('请选择日期时间', 'warning');
+          return;
+        }
+        
+        try {
+          const date = new Date(datetimeInputEl.value);
+          const timestamp = date.getTime();
+          timestampInputEl.value = timestamp.toString();
+          
+          resultEl.innerHTML = `
+            <div class="mb-2"><strong>时间戳 (毫秒):</strong> ${timestamp}</div>
+            <div class="mb-2"><strong>时间戳 (秒):</strong> ${Math.floor(timestamp / 1000)}</div>
+            <div><strong>格式化时间:</strong> ${date.toLocaleString()}</div>
+          `;
+          
+          showNotification('转换成功');
+        } catch (e) {
+          showNotification('转换失败: ' + e.message, 'error');
+        }
+      });
+      
+      // 时间戳转日期时间
+      timestampToDatetimeBtn.addEventListener('click', () => {
+        if (!timestampInputEl.value) {
+          showNotification('请输入时间戳', 'warning');
+          return;
+        }
+        
+        try {
+          let timestamp = parseInt(timestampInputEl.value);
+          
+          // 如果是10位数字，认为是秒级时间戳
+          if (timestamp.toString().length === 10) {
+            timestamp *= 1000;
+          }
+          
+          const date = new Date(timestamp);
+          const localIso = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+          datetimeInputEl.value = localIso;
+          
+          resultEl.innerHTML = `
+            <div class="mb-2"><strong>本地时间:</strong> ${date.toLocaleString()}</div>
+            <div class="mb-2"><strong>UTC时间:</strong> ${date.toUTCString()}</div>
+            <div><strong>详细信息:</strong> ${date.toLocaleString('zh-CN', { 
+              year: 'numeric', month: 'long', day: 'numeric', 
+              hour: '2-digit', minute: '2-digit', second: '2-digit',
+              weekday: 'long', timeZoneName: 'short'
+            })}</div>
+          `;
+          
+          showNotification('转换成功');
+        } catch (e) {
+          showNotification('转换失败: 请输入有效的时间戳', 'error');
+        }
+      });
+      
+      // 当前时间按钮
+      nowBtn.addEventListener('click', () => {
+        setCurrentDateTime();
+        datetimeToTimestampBtn.click();
+      });
+      
+      // 当前时间戳按钮
+      nowTimestampBtn.addEventListener('click', () => {
+        setCurrentDateTime();
+        timestampToDatetimeBtn.click();
+      });
+    }
+
+    // 正则测试工具事件
+    function bindRegexTesterEvents() {
+      const patternEl = document.getElementById('regex-pattern');
+      const textEl = document.getElementById('regex-text');
+      const resultEl = document.getElementById('regex-result');
+      const testBtn = document.getElementById('test-regex-btn');
+      const flagGBtn = document.getElementById('regex-flag-g');
+      const flagIBtn = document.getElementById('regex-flag-i');
+      const flagMBtn = document.getElementById('regex-flag-m');
+      
+      // 标记正则标志按钮状态
+      let flags = '';
+      
+      function updateFlagButton(btn, flag) {
+        if (btn.classList.contains('bg-primary')) {
+          btn.classList.remove('bg-primary', 'text-white');
+          btn.classList.add('btn-secondary');
+          flags = flags.replace(flag, '');
+        } else {
+          btn.classList.remove('btn-secondary');
+          btn.classList.add('bg-primary', 'text-white');
+          flags += flag;
+        }
+      }
+      
+      flagGBtn.addEventListener('click', () => updateFlagButton(flagGBtn, 'g'));
+      flagIBtn.addEventListener('click', () => updateFlagButton(flagIBtn, 'i'));
+      flagMBtn.addEventListener('click', () => updateFlagButton(flagMBtn, 'm'));
+      
+      // 测试正则表达式
+      testBtn.addEventListener('click', () => {
+        if (!patternEl.value) {
+          showNotification('请输入正则表达式', 'warning');
+          return;
+        }
+        
+        try {
+          const regex = new RegExp(patternEl.value, flags);
+          const text = textEl.value;
+          const matches = text.match(regex);
+          
+          if (matches) {
+            resultEl.innerHTML = `
+              <div class="mb-3 text-success"><i class="fa fa-check-circle"></i> 找到 ${matches.length} 个匹配项</div>
+              <div class="mb-2"><strong>匹配结果:</strong></div>
+              <ul class="list-disc pl-5 space-y-1">
+                ${matches.map(match => `<li>${JSON.stringify(match)}</li>`).join('')}
+              </ul>
+            `;
+            
+            // 高亮显示匹配内容
+            if (flags.includes('g')) {
+              const highlighted = text.replace(regex, match => 
+                `<span class="bg-yellow-200 dark:bg-yellow-900 px-1 rounded">${match}</span>`
+              );
+              resultEl.innerHTML += `
+                <div class="mt-4">
+                  <div class="mb-2"><strong>高亮显示:</strong></div>
+                  <div class="p-2 bg-gray-100 dark:bg-gray-800 rounded whitespace-pre-wrap">${highlighted}</div>
+                </div>
+              `;
+            }
+          } else {
+            resultEl.innerHTML = `<div class="text-warning"><i class="fa fa-exclamation-triangle"></i> 没有找到匹配项</div>`;
+          }
+          
+          showNotification('正则测试完成');
+        } catch (e) {
+          resultEl.innerHTML = `<div class="text-danger"><i class="fa fa-exclamation-circle"></i> 正则表达式错误: ${e.message}</div>`;
+          showNotification('正则表达式无效', 'error');
+        }
+      });
+    }
+
+    // HTML编解码工具事件
+    function bindHtmlEncoderEvents() {
+      const inputEl = document.getElementById('html-input');
+      const outputEl = document.getElementById('html-output');
+      const encodeBtn = document.getElementById('html-encode-btn');
+      const decodeBtn = document.getElementById('html-decode-btn');
+      const copyBtn = document.getElementById('html-copy-btn');
+      const swapBtn = document.getElementById('html-swap-btn');
+      
+      // HTML编码
+      function encodeHtml(str) {
+        const el = document.createElement('div');
+        el.textContent = str;
+        return el.innerHTML;
+      }
+      
+      // HTML解码
+      function decodeHtml(str) {
+        const el = document.createElement('div');
+        el.innerHTML = str;
+        return el.textContent;
+      }
+      
+      encodeBtn.addEventListener('click', () => {
+        outputEl.value = encodeHtml(inputEl.value);
+        showNotification('HTML编码成功');
+      });
+      
+      decodeBtn.addEventListener('click', () => {
+        inputEl.value = decodeHtml(outputEl.value);
+        showNotification('HTML解码成功');
+      });
+      
+      copyBtn.addEventListener('click', () => {
+        if (outputEl.value) {
+          copyToClipboard(outputEl.value);
+        } else {
+          showNotification('没有可复制的内容', 'warning');
+        }
+      });
+      
+      swapBtn.addEventListener('click', () => {
+        const temp = inputEl.value;
+        inputEl.value = outputEl.value;
+        outputEl.value = temp;
+        showNotification('内容已交换');
+      });
+    }
+
+    // CSS压缩工具事件
+    function bindCssMinifierEvents() {
+      const inputEl = document.getElementById('css-input');
+      const outputEl = document.getElementById('css-output');
+      const minifyBtn = document.getElementById('css-minify-btn');
+      const formatBtn = document.getElementById('css-format-btn');
+      const copyBtn = document.getElementById('css-copy-btn');
+      const clearBtn = document.getElementById('css-clear-btn');
+      
+      // 简单的CSS压缩
+      function minifyCss(css) {
+        // 移除注释
+        css = css.replace(/\/\*[\s\S]*?\*\//g, '');
+        // 移除换行和制表符
+        css = css.replace(/[\n\t]/g, '');
+        // 移除多余空格
+        css = css.replace(/\s+/g, ' ');
+        // 移除选择器和属性之间的空格
+        css = css.replace(/\s*{\s*/g, '{');
+        css = css.replace(/\s*}\s*/g, '}');
+        css = css.replace(/\s*:\s*/g, ':');
+        css = css.replace(/\s*;\s*/g, ';');
+        css = css.replace(/\s*,\s*/g, ',');
+        css = css.replace(/\s*\(\s*/g, '(');
+        css = css.replace(/\s*\)\s*/g, ')');
+        // 移除最后一个分号
+        css = css.replace(/;}/g, '}');
+        return css;
+      }
+      
+      // 简单的CSS格式化
+      function formatCss(css) {
+        // 先压缩再重新格式化
+        let minified = minifyCss(css);
+        let formatted = '';
+        let indentLevel = 0;
+        const indentSize = 2;
+        
+        for (let i = 0; i < minified.length; i++) {
+          const char = minified[i];
+          
+          if (char === '{') {
+            indentLevel++;
+            formatted += ' {\n' + ' '.repeat(indentLevel * indentSize);
+          } else if (char === '}') {
+            indentLevel--;
+            formatted += '\n' + ' '.repeat(indentLevel * indentSize) + '}';
+            // 如果下一个字符不是}或;，添加换行
+            if (i + 1 < minified.length && minified[i + 1] !== '}' && minified[i + 1] !== ';') {
+              formatted += '\n';
+            }
+          } else if (char === ';') {
+            formatted += ';\n' + ' '.repeat(indentLevel * indentSize);
+          } else if (char === ',') {
+            formatted += ', ';
+          } else {
+            formatted += char;
+          }
+        }
+        
+        return formatted;
+      }
+      
+      minifyBtn.addEventListener('click', () => {
+        if (!inputEl.value) {
+          showNotification('请输入CSS代码', 'warning');
+          return;
+        }
+        
+        outputEl.value = minifyCss(inputEl.value);
+        showNotification('CSS压缩成功');
+      });
+      
+      formatBtn.addEventListener('click', () => {
+        if (!inputEl.value) {
+          showNotification('请输入CSS代码', 'warning');
+          return;
+        }
+        
+        outputEl.value = formatCss(inputEl.value);
+        showNotification('CSS格式化成功');
+      });
+      
+      copyBtn.addEventListener('click', () => {
+        if (outputEl.value) {
+          copyToClipboard(outputEl.value);
+        } else {
+          showNotification('没有可复制的内容', 'warning');
+        }
+      });
+      
+      clearBtn.addEventListener('click', () => {
+        inputEl.value = '';
+        outputEl.value = '';
+      });
+    }
+
+    // UUID生成工具事件
+    function bindUuidGeneratorEvents() {
+      const versionEl = document.getElementById('uuid-version');
+      const countEl = document.getElementById('uuid-count');
+      const hyphensEl = document.getElementById('uuid-hyphens');
+      const uppercaseEl = document.getElementById('uuid-uppercase');
+      const resultsEl = document.getElementById('uuid-results');
+      const generateBtn = document.getElementById('generate-uuid-btn');
+      const copyAllBtn = document.getElementById('copy-all-uuid-btn');
+      
+      // 生成UUID v4 (随机)
+      function generateUuidV4() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+          const r = Math.random() * 16 | 0;
+          const v = c === 'x' ? r : (r & 0x3 | 0x8);
+          return v.toString(16);
+        });
+      }
+      
+      // 生成UUID v1 (基于时间戳)
+      function generateUuidV1() {
+        const now = new Date().getTime();
+        const uuid = 'xxxxxxxx-xxxx-1xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+          const r = (now + Math.random() * 16) % 16 | 0;
+          const v = c === 'x' ? r : (r & 0x3 | 0x8);
+          return v.toString(16);
+        });
+        return uuid;
+      }
+      
+      // 生成UUID
+      function generateUuid() {
+        const version = versionEl.value;
+        return version === 'v1' ? generateUuidV1() : generateUuidV4();
+      }
+      
+      // 格式化UUID
+      function formatUuid(uuid) {
+        let formatted = uuid;
+        if (!hyphensEl.checked) {
+          formatted = formatted.replace(/-/g, '');
+        }
+        if (uppercaseEl.checked) {
+          formatted = formatted.toUpperCase();
+        }
+        return formatted;
+      }
+      
+      // 生成多个UUID
+      generateBtn.addEventListener('click', () => {
+        const count = parseInt(countEl.value) || 1;
+        resultsEl.innerHTML = '';
+        
+        for (let i = 0; i < count; i++) {
+          const uuid = formatUuid(generateUuid());
+          const uuidEl = document.createElement('div');
+          uuidEl.className = 'flex items-center justify-between py-1 border-b border-gray-200 dark:border-gray-700 last:border-0';
+          uuidEl.innerHTML = `
+            <span class="font-mono text-sm">${uuid}</span>
+            <button class="copy-uuid-btn text-gray-500 hover:text-primary p-1" data-uuid="${uuid}">
+              <i class="fa fa-copy"></i>
+            </button>
+          `;
+          resultsEl.appendChild(uuidEl);
+        }
+        
+        // 绑定单个复制按钮事件
+        document.querySelectorAll('.copy-uuid-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            copyToClipboard(btn.dataset.uuid);
+          });
+        });
+        
+        showNotification(`已生成 ${count} 个UUID`);
+      });
+      
+      // 复制所有UUID
+      copyAllBtn.addEventListener('click', () => {
+        const uuids = Array.from(resultsEl.querySelectorAll('span'))
+          .map(span => span.textContent)
+          .join('\n');
+        
+        if (uuids) {
+          copyToClipboard(uuids);
+        } else {
+          showNotification('没有可复制的UUID', 'warning');
+        }
+      });
+      
+      // 初始生成一个UUID
+      generateBtn.click();
+    }
+
+    // 初始化应用
+    function initApp() {
+      initTheme();
+      initToolList();
+      bindToolEvents();
+      console.log('%c开发者工具已加载', 'color: green; font-size: 16px;');
+      // 默认选中第一个工具
+      setTimeout(() => {
+        const firstTool = document.querySelector('.tool-card');
+        if (firstTool) {
+          firstTool.click();
+        }
+      }, 100);
+    }
+
+    // 启动应用
+    document.addEventListener('DOMContentLoaded', initApp);
+  </script>
+</body>
+</html>

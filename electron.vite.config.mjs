@@ -2,7 +2,7 @@
  * @Author: 羊驼
  * @Date: 2025-05-29 16:00:32
  * @LastEditors: 羊驼
- * @LastEditTime: 2025-07-15 11:02:22
+ * @LastEditTime: 2025-07-28 14:10:52
  * @Description: file content
  */
 import { resolve } from 'path'
@@ -17,7 +17,6 @@ export default defineConfig({
       }
     },
     plugins: [externalizeDepsPlugin()],
-
   },
   preload: {
     resolve: {

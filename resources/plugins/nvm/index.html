@@ -1,0 +1,492 @@
+<!doctype html>
+<html>
+
+  <head>
+    <meta charset="UTF-8"/>
+    <title>nvm工具</title>
+    <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
+    <meta http-equiv="Content-Security-Policy" content/>
+    <script src="./static/taildwind.js"></script>
+    <script src="./static/vue@2.js"></script>
+    <link href="./static/font-awesome/css/font-awesome.min.css" rel="stylesheet"/>
+    <style type="text/tailwindcss">
+      @layer utilities {
+        .content-auto {
+          content-visibility: auto;
+        }
+        .status-bar-shadow {
+          box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .text-shadow {
+          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .card-shadow {
+          box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1);
+        }
+        .transition-all-300 {
+          transition: all 300ms ease-in-out;
+        }
+      }
+    </style>
+    <style>
+      select {
+        background-color: transparent;
+      }
+
+      .drag {
+        user-select: none;
+        app-region: drag;
+      }
+
+      .no-drag {
+        user-select: all;
+        app-region: no-drag;
+      }
+
+      *::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+
+      *::-webkit-scrollbar-track {
+        background-color: #fff;
+      }
+
+      *::-webkit-scrollbar-thumb {
+        background-color: #eee;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+
+  <body class="overflow-hidden">
+    <div id="app" class="bg-transparent font-inter h-[100vh] flex flex-col overflow-hidden">
+      <div v-if="simple" class="flex bg-white/70 justify-between items-center px-2 h-[100vh] rounded status-bar-shadow">
+        <!-- 版本选择器 -->
+        <div class="relative">
+          <div class="flex items-center space-x-1 cursor-pointer btn-hover px-2 py-1" @click="select=true">
+            <span class="font-medium">
+              <span class="mr-1">Node</span>
+              <select v-model="currentVersion" @change="changeVersion">
+                <option v-for="item in list" :value="item.version">v{{item.version}}</option>
+              </select>
+            </span>
+          </div>
+        </div>
+        <!-- 右侧：窗口控制按钮 -->
+        <div class="flex items-center space-x-1">
+          <button @click="switchMode(false)" class="btn-hover p-2  hover:text-primary text-sm" title="完整模式">
+            <i class="fa fa-window-maximize"></i>
+          </button>
+          <button @click="close" class="btn-hover p-2  hover:text-primary text-sm" title="完整模式">
+            <i class="fa fa-close"></i>
+          </button>
+        </div>
+      </div>
+      <div v-else class="bg-gray-50" style="border-radius:10px">
+        <!-- 顶部导航 -->
+        <header class="drag bg-white border-b border-light-2 shadow-sm" style="border-radius: 10px 10px 0 0;">
+          <div class="mx-auto p-4">
+            <div class="flex items-center space-x-2">
+              <h1 class="font-bold text-dark text-base flex-1 flex justify-between items-center">
+                <div>
+                  <i class="fa fa-code-fork text-primary text-xl"></i>
+                版本管理
+                <span class="ml-2 bg-light-1 px-2 py-0.5 rounded text-xs">v{{version}}</span>
+                  <i @click="checkNvm" :class="{'text-gray-500':loading,'cursor-not-allowed':loading}"
+                  class="no-drag fa fa-refresh text-success hover:text-success/90 cursor-pointer transition-all-300"></i>
+                </div>
+                <div>
+                  <i @click="switchMode(true)" :class="{'text-gray-500':loading,'cursor-not-allowed':loading}"
+                  class="no-drag fa fa-minus text-primary hover:text-primary/90 cursor-pointer ml-2 transition-all-300"></i>
+                  <i @click="close" :class="{'text-gray-500':loading,'cursor-not-allowed':loading}"
+                  class="no-drag fa fa-close text-danger hover:text-danger/90 cursor-pointer ml-2 transition-all-300 "></i>
+                </div>
+              </h1>
+            </div>
+          </div>
+        </header>
+
+        <!-- 主内容区 -->
+        <main class="flex-grow container mx-auto px-4 py-4 h-[calc(100vh-64px)]  overflow-auto"
+        :class="{'overflow-hidden':visible}">
+          <!-- 状态卡片 -->
+          <div id="nvm-status-card" v-if="!version" class="mb-2 bg-white rounded-xl p-6 card-shadow">
+            <div class="flex items-start justify-between">
+              <div>
+                <h2 class="text-xl font-bold text-dark mb-2 flex items-center">
+                  <i class="fa fa-microchip text-primary mr-2"></i>NVM 状态
+              </h2>
+                <div id="nvm-dependency-check" class="flex items-center">
+                  <div id="dependency-loading" class="flex items-center text-dark-2" v-if="loading">
+                    <i class="fa fa-circle-o-notch fa-spin mr-2"></i>
+                    <span>正在检查 NVM 依赖...</span>
+                  </div>
+                  <div v-else-if="!version" id="dependency-missing" class="flex items-center text-danger">
+                    <i class="fa fa-exclamation-circle mr-2"></i>
+                    <span>无 NVM 依赖，请安装</span>
+                  </div>
+                  <div v-else id="dependency-found">
+                    <div class="flex items-center text-success mb-2">
+                      <i class="fa fa-check-circle mr-2"></i>
+                      <span>NVM 已安装</span>
+                    </div>
+                    <div class="text-dark-2">
+                      <span class="font-medium">当前版本:</span>
+                      <span id="current-version" class="ml-2 bg-light-1 px-2 py-0.5 rounded text-sm">v{{version}}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div v-if="!loading&&version">
+            <!-- 功能区 - 依赖不存在时隐藏 -->
+            <div id="nvm-features" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-2">
+              <!-- 安装 Node 版本 -->
+              <div
+              class="bg-white rounded-xl p-6 card-shadow hover:shadow-lg transition-all-300 border-l-4 border-primary">
+                <div class="flex justify-between items-start mb-4">
+                  <h3 class="text-lg font-semibold text-dark">安装 Node 版本</h3>
+                  <div class="bg-primary/10 text-center pt-1 w-[33px] h-[33px] rounded-full text-primary">
+                    <i class="fa fa-download"></i>
+                  </div>
+                </div>
+                <p class="text-dark-2 mb-4">
+                安装指定版本的 Node.js，支持最新稳定版、LTS 版本及自定义版本号。
+              </p>
+                <div class="flex flex-col space-y-2">
+                  <div class="relative">
+                    <input type="text" v-model="download" :disabled="disabled"
+                    :class="{'cursor-not-allowed':disabled,'bg-light-1':disabled}" placeholder="输入版本号 (例如: v16.15.1)"
+                    class="w-full py-2 px-4 border border-light-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all-300"/>
+                    <button :disabled="disabled" @click="installNode"
+                    :class="{'cursor-not-allowed':disabled,'bg-gray-500':disabled}"
+                    class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-primary hover:bg-primary/90 text-white py-1 px-3 rounded transition-all-300">
+                    安装
+                  </button>
+                  </div>
+                  <div class="text-red-500 mt-2 font-semibold" v-show="errorText">{{errorText}}</div>
+                </div>
+              </div>
+
+              <!-- 管理已安装版本 -->
+              <div
+              class="bg-white rounded-xl p-6 card-shadow hover:shadow-lg transition-all-300 border-l-4 border-secondary">
+                <div class="flex justify-between items-start mb-4">
+                  <h3 class="text-lg font-semibold text-dark">管理已安装版本</h3>
+                  <div class="bg-secondary/10 text-center pt-1 w-[33px] h-[33px] rounded-full text-secondary">
+                    <i class="fa fa-cubes"></i>
+                  </div>
+                </div>
+                <p class="text-dark-2 mb-4">查看、切换和删除已安装的 Node.js 版本，设置默认版本。</p>
+                <div class="space-y-4">
+                  <div class="bg-light-1 rounded-lg p-3 max-h-36 overflow-y-auto">
+                    <ul id="installed-versions" class="space-y-2">
+                      <li v-for="item in list" :key="item.version"
+                      class="flex justify-between items-center p-2 hover:bg-white rounded transition-all-300">
+                        <div class="flex items-center">
+                          <span v-if="item.use"
+                          class="bg-success/20 text-success text-xs px-2 py-0.5 rounded mr-2">当前</span>
+                          <span>{{item.version}}</span>
+                        </div>
+                        <div class="flex space-x-1" v-if="!item.use">
+                          <button class="text-dark-2 hover:text-success/80 text-success transition-all-300 mr-2"
+                          title="使用此版本" @click="useVersion(item.version)" :disabled="disabled"
+                          :class="{'cursor-not-allowed':disabled,'text-gray-400':disabled}">
+                            <i class="fa fa-play"></i>
+                          </button>
+                          <button :class="{'cursor-not-allowed':disabled,'text-gray-400':disabled}"
+                          class="text-dark-2 hover:text-danger text-red-500 transition-all-300" title="删除"
+                          @click="deleteVersion(item.version)" :disabled="disabled">
+                            <i class="fa fa-trash"></i>
+                          </button>
+                        </div>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 高级功能 -->
+              <div
+              class="bg-white rounded-xl p-6 card-shadow hover:shadow-lg transition-all-300 border-l-4 border-dark w-full">
+                <div class="flex justify-between items-start mb-4">
+                  <h3 class="text-lg font-semibold text-dark">高级功能</h3>
+                  <div class="bg-dark/10 text-center pt-1 w-[33px] h-[33px] rounded-full text-dark">
+                    <i class="fa fa-cog"></i>
+                  </div>
+                </div>
+                <p class="text-dark-2 mb-4">管理 NVM 配置、镜像源和环境变量，执行高级操作。</p>
+                <div class="space-y-2">
+                  <button
+                  class="w-full text-left bg-light-1 hover:bg-light-2 py-2 px-4 rounded-lg transition-all-300 flex items-center"
+                  @click="openSetting" :disbaled="disabled"
+                  :class="{'cursor-not-allowed':disabled,'bg-gray-300':disabled}">
+                    <i class="fa fa-cog mr-2 text-dark-2"></i>
+                    <span>配置镜像源</span>
+                  </button>
+                  <button @click="openConfig" :disbaled="disabled"
+                  class="w-full text-left bg-light-1 hover:bg-light-2 py-2 px-4 rounded-lg transition-all-300 flex items-center"
+                  :class="{'cursor-not-allowed':disabled,'bg-gray-300':disabled}">
+                    <i class="fa fa-file-code-o mr-2 text-dark-2"></i>
+                    <span>编辑配置文件</span>
+                  </button>
+                  <button :disbaled="disabled" @click="setNvm('on')"
+                  class="w-full text-left bg-light-1 hover:bg-light-2 py-2 px-4 rounded-lg transition-all-300 flex items-center"
+                  :class="{'cursor-not-allowed':disabled,'bg-gray-300':disabled}">
+                    <i class="fa fa-play mr-2 text-dark-2"></i>
+                    <span>开启 NVM</span>
+                  </button>
+                  <button :disbaled="disabled" @click="setNvm('off')"
+                  class="w-full text-left bg-light-1 hover:bg-light-2 py-2 px-4 rounded-lg transition-all-300 flex items-center"
+                  :class="{'cursor-not-allowed':disabled,'bg-gray-300':disabled}">
+                    <i class="fa fa-close mr-2 text-dark-2"></i>
+                    <span>关闭 NVM</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- 安装 NVM 按钮 - 依赖不存在时显示 -->
+              <div v-if="!loading&&!version" id="install-nvm-container" class="text-center mt-8">
+                <button @click="installNvm" id="install-nvm-btn"
+                class="bg-primary hover:bg-primary/90 text-white py-3 px-8 rounded-lg transition-all-300 flex items-center justify-center mx-auto shadow-lg hover:shadow-xl flex-1">
+                  <i class="fa fa-download mr-2"></i>
+                  <span>安装 NVM</span>
+                </button>
+                <p class="text-dark-2 mt-3">
+                点击上方按钮安装 Node Version Manager (NVM)，开始管理你的 Node.js 版本
+              </p>
+              </div>
+            </main>
+            <div v-if="visible"
+        class="fixed w-[100vw] h-[100vh] bottom-0 left-0 right-0 flex justify-center items-center bg-gray-300/50">
+              <div class="bg-white w-[80vw] h-[370px] max-w-[360px] rounded py-4 px-6">
+                <div class="flex justify-between items-center">
+                  <h3 class="text-lg font-semibold text-dark ">配置镜像源</h3>
+                  <button @click="visible=false" class="text-dark-2 hover:text-danger text-red-500 transition-all-300"
+              @click="visible=false">
+                    <i class="fa fa-close"></i>
+                  </button>
+                </div>
+                <div class="mt-4">
+                  <div class="mb-2">
+                    <div class="text-sm mb-2">代理地址</div>
+                    <input type="text" v-model="setting.proxy" :class="{'cursor-not-allowed':disabled,'bg-light-1':disabled}"
+                placeholder="输入地址"
+                class="w-full py-2 px-4 border border-light-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all-300"/>
+                  </div>
+                  <div class="mb-2">
+                    <div class="text-sm mb-2">Node下载源</div>
+                    <input type="text" v-model="setting.node" :class="{'cursor-not-allowed':disabled,'bg-light-1':disabled}"
+                placeholder="输入地址"
+                class="w-full py-2 px-4 border border-light-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all-300"/>
+                  </div>
+                  <div class="mb-2">
+                    <div class="text-sm mb-2">NPM下载源</div>
+                    <input type="text" v-model="setting.npm" :class="{'cursor-not-allowed':disabled,'bg-light-1':disabled}"
+                placeholder="输入地址"
+                class="w-full py-2 px-4 border border-light-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all-300"/>
+                  </div>
+                  <button @click="saveSetting"
+              class="w-full bg-success hover:bg-success/80 py-2 px-4 mt-2 rounded-lg transition-all-300 text-white"
+              :class="{'cursor-not-allowed':disabled,'bg-light-1':disabled}">
+                    <i class="fa fa-save mr-2"></i>
+                    <span>保存</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <script type="module">
+          tailwind.config = {
+            theme: {
+              extend: {
+                colors: {
+                  primary: '#165DFF',
+                  secondary: '#36CFC9',
+                  success: '#00B42A',
+                  warning: '#FF7D00',
+                  danger: '#F53F3F',
+                  dark: '#1D2129',
+                  'dark-2': '#4E5969',
+                  'light-1': '#F2F3F5',
+                  'light-2': '#E5E6EB',
+                  'light-3': '#C9CDD4'
+                },
+                fontFamily: {
+                  inter: ['Inter', 'system-ui', 'sans-serif']
+                }
+              }
+            }
+          }
+          var app = new Vue({
+            el: '#app',
+            data: {
+              simple: true,
+              select: false,
+              loading: false,
+              version: false,
+              ipc: window.electron.ipcRenderer,
+              list: [],
+              download: '',
+              disabled: false,
+              errorText: '',
+              visible: false,
+              setting: {
+                proxy: "",
+                node: "",
+                npm: ""
+              }
+            },
+            computed: {
+              currentVersion() {
+                let currentVersion = this
+                  .list
+                  .find(x => x.use)
+                return currentVersion
+                  ?.version || ""
+              }
+            },
+            mounted() {
+              this
+                .checkNvm()
+                .then(() => {
+                  this.switchMode(
+                    this.version
+                    ? true
+                    : false)
+                })
+              this
+                .ipc
+                .remove('check-nvm', this.checkNvm)
+              this
+                .ipc
+                .on('check-nvm', this.checkNvm)
+              this
+                .ipc
+                .remove('focus', this.focus)
+              this
+                .ipc
+                .on('focus', this.focus)
+            },
+            methods: {
+              focus() {
+                this.switchMode(false)
+              },
+              async getVersionList() {
+                let list = await this
+                  .ipc
+                  .invoke('get-nvm-version')
+                this.list = list
+              },
+              async checkNvm() {
+                if (this.loading) 
+                  return
+                this.loading = true
+                this.version = await this
+                  .ipc
+                  .invoke('check-nvm')
+                this.version && await this.getVersionList()
+                this.loading = false
+
+              },
+              async switchMode(simple) {
+                this.simple = simple
+                this
+                  .ipc
+                  .invoke('set-mode', this.simple)
+              },
+              async installNvm() {
+                this.loading = true
+                await this
+                  .ipc
+                  .invoke('install-nvm')
+                this.loading = false
+              },
+              async useVersion(version) {
+                this.disabled = true
+                await this
+                  .ipc
+                  .invoke('use-version', version)
+                await this.getVersionList()
+                this.disabled = false
+              },
+              async deleteVersion(version) {
+                this.disabled = true
+                await this
+                  .ipc
+                  .invoke('delete-version', version)
+                await this.getVersionList()
+                this.disabled = false
+              },
+              async installNode() {
+                this.errorText = ''
+                if (!this.download) {
+                  return (this.errorText = '请输入版本号')
+                }
+                // 仅能输入版本号
+                if (!/^\d+\.\d+\.\d+$/.test(this.download)) {
+                  this.download = ''
+                  return (this.errorText = '请输入正确的版本号')
+                }
+                this.disabled = true
+                this.errorText = '安装中……'
+                let result = await this
+                  .ipc
+                  .invoke('install-version', this.download)
+                this.download = ''
+                if (result.includes('not available')) {
+                  this.errorText = '无效版本号 安装失败'
+                } else {
+                  this.getVersionList()
+                }
+                this.errorText = ''
+                this.disabled = false
+              },
+              async openSetting() {
+                let setting = await this
+                  .ipc
+                  .invoke('get-setting')
+                this.setting = setting
+                this.visible = true
+              },
+              async saveSetting() {
+                this.disabled = true
+                await this
+                  .ipc
+                  .invoke('save-setting', this.setting)
+                this.visible = false
+                this.disabled = false
+              },
+              async openConfig() {
+                this.disabled = true
+                await this
+                  .ipc
+                  .invoke('open-config')
+                this.disabled = false
+              },
+              async setNvm(status) {
+                this.disabled = true
+                await this
+                  .ipc
+                  .invoke(`nvm-${status}`)
+                this.disabled = false
+              },
+              async close() {
+                await this
+                  .ipc
+                  .invoke('close')
+              },
+              async changeVersion({target: {
+                  value
+                }}) {
+                await this.useVersion(value)
+              }
+            }
+          })
+        </script>
+      </body>
+
+    </html>

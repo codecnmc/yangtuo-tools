@@ -2,12 +2,12 @@
  * @Author: 羊驼
  * @Date: 2025-06-17 10:20:25
  * @LastEditors: 羊驼
- * @LastEditTime: 2025-07-17 11:28:44
+ * @LastEditTime: 2025-08-20 09:40:33
  * @Description: 数据库类
  */
 const { Sequelize } = require('sequelize');
 import { app, BrowserWindow, dialog } from 'electron'
-import path  from 'node:path'
+import path from 'node:path'
 const database = path.join(__dirname, "../../resources/other/database.sqlite").replace("app.asar", "app.asar.unpacked");
 //　初始化文件与数据库
 const sequelize = new Sequelize({
@@ -16,30 +16,10 @@ const sequelize = new Sequelize({
     logging: false,
 });
 
-import FilesModel from "./models/Files"
-import ShellsModel from "./models/Shells"
-import LogsModel from "./models/Logs"
-let ModelsConfig =
-{
-    freezeTableName: true, // Model 对应的表名将与model名相同
-    timestamps: true,
-    paranoid: true,
-    deletedAt: true,
-    createdAt: true,
-    updatedAt: true,
-}
-// 模型
-const Files = sequelize.define("sys_files", FilesModel, ModelsConfig)
-const Shell = sequelize.define("sys_shell", ShellsModel, ModelsConfig)
-const Logs = sequelize.define("sys_logs", LogsModel, ModelsConfig)
-
-
-// Files.sync({ alter: true })
-
 export default class Database {
 
     // sequelize对象
-    static sequelize;
+    static sequelize = sequelize;
     // 单例
     static _instance = null
     static getInstance() {
@@ -92,11 +72,7 @@ export default class Database {
         await sequelize.truncate({ force: true })
     }
 
-    /**
-     * @description: 获取模型
-     * @return {*}
-     */
-    getModels() {
-        return { Files, Shell, Logs }
+    getSequlize() {
+        return sequelize
     }
 }

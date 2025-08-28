@@ -1,0 +1,1 @@
+{"name":"frontend-tools","displayName":"前端工具合集","main":"./index.html","script":"./index.js","cover":"icon.jpg","hash":"","version":"0.0.1","author":"yangtuo","description":"前端工程师常用工具合集","enable":false,"type":"view","framework":[],"electron":{},"injectCss":false,"dev":{"local":true,"port":2000,"devTools":true,"hash":""}}
